@@ -1,21 +1,18 @@
-import { Avatar } from "@material-ui/core";
+import { Avatar, ListItem, ListItemAvatar, ListItemText } from "@material-ui/core";
 import React from "react";
 import "./Message.css";
 
-function Message({ timestamp, user, message }) {
+function Message({ user, message }) {
   return (
-    <div className="message">
-      <Avatar src={user.photo} />
-      <div className="message__info">
-        <h4>
-          {user.displayName}
-          <span className="message__timestamp">
-            {new Date(timestamp?.toDate()).toUTCString()}
-          </span>
-        </h4>
-        <p>{message}</p>
-      </div>
-    </div>
+    <ListItem alignItems="flex-start">
+      <ListItemAvatar>
+        <Avatar alt={user.firstName} src={user.photoURL} />
+      </ListItemAvatar>
+      <ListItemText
+        primary={user.firstName}
+        secondary={message}
+      />
+    </ListItem>
   );
 }
 

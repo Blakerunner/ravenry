@@ -1,79 +1,82 @@
 import React, { useEffect, useState } from "react";
 import "./Chat.css";
 import Message from "./Message";
-import ChatHeader from "./ChatHeader";
-import AddCircleIcon from "@material-ui/icons/AddCircle";
 import SendRoundedIcon from "@material-ui/icons/SendRounded";
 import { useSelector } from "react-redux";
-import { selectChannelId, selectChannelName } from "./features/appSlice";
+import { selectRoomInfo, selectRoomId } from "./features/appSlice";
 import { selectUser } from "./features/userSlice";
 import db from "./firebase";
-import firebase from "firebase";
+import { Avatar, Fab, List } from "@material-ui/core";
 
 function Chat() {
   const user = useSelector(selectUser);
-  const channelId = useSelector(selectChannelId);
-  const channelName = useSelector(selectChannelName);
+  const roomId = useSelector(selectRoomId);
+  const roomInfo = useSelector(selectRoomInfo);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
 
   useEffect(() => {
-    if (channelId) {
-      db.collection("channels")
-        .doc(channelId)
+    if (roomId != null) {
+      db.collection("rooms")
+        .doc(roomId)
         .collection("messages")
         .orderBy("timestamp", "desc")
         .onSnapshot((snapshot) =>
           setMessages(snapshot.docs.map((doc) => doc.data()))
         );
     }
-  }, [channelId]);
+  }, [roomId]);
 
   const sendMessage = (e) => {
     e.preventDefault();
-
-    db.collection("channels").doc(channelId).collection("messages").add({
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      message: input,
-      user: user,
-    });
+    if (!input.trim() === 0) {
+      console.log(user.displayName + " message send: " + input);
+      db.collection("rooms").doc(roomId).collection("messages").add({
+        message: input,
+        toId: user.id,
+        fromId: user.id,
+      });
+    }
 
     setInput("");
   };
 
   return (
     <div className="chat">
-      <ChatHeader channelName={channelName} />
-
-      <div className="chat__messages">
-        {messages.map((message) => (
-          <Message
-            timestamp={message.timestamp}
-            message={message.message}
-            user={message.user}
-          />
-        ))}
-      </div>
+      <List className="chat__messages">
+        {messages.map((message) => {
+          if (message == null) return <h1>No messages.</h1>;
+          if (message.fromId === user.id || message.toId === user.id)
+            return (
+              <Message
+                toId={message.toId}
+                fromId={message.fromId}
+                message={message.message}
+              />
+            );
+          return null;
+        })}
+      </List>
 
       <div className="chat__input">
         <form>
           <input
             value={input}
-            disabled={!channelId}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Message #${channelName}`}
+            placeholder={`Send raven to ...`}
           />
         </form>
 
-        <div className="chat__inputIcons">
-          <SendRoundedIcon
-            onClick={sendMessage}
-            disabled={!channelId}
-            className="chat__inputButton"
-            type="submit"
-            fontSize="large"
-          />
-        </div>
+        <Fab
+          className="chat__sendButton"
+          aria-label="add"
+          color="default"
+          size="large"
+          type="submit"
+          component="button"
+          onClick={sendMessage}>
+          <Avatar src="/images/raven-logo-500x500.png" />
+        </Fab>
       </div>
     </div>
   );

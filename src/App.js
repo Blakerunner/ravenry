@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { selectUser, login, logout } from "./features/userSlice";
-import { auth } from "./firebase";
+import { setRoomInfo, setRoomId } from "./features/appSlice";
+import db, { auth } from "./firebase";
 import Chat from "./Chat";
 import Login from "./Login";
 import Sidebar from "./Sidebar";
@@ -16,12 +17,23 @@ function App() {
       if (authUser) {
         dispatch(
           login({
-            uid: authUser.uid,
+            id: authUser.uid,
             photo: authUser.photoURL,
-            email: authUser.email,
             displayName: authUser.displayName,
           })
         );
+        console.log("User: " + authUser.uid);
+
+        // needs error checking
+        db.collection("rooms")
+          .where("id", "==", authUser.uid)
+          .get()
+          .then((room) => {
+            room.forEach((doc) => {
+              dispatch(setRoomId(doc.id));
+              dispatch(setRoomInfo(doc.data()));
+            })
+          });
       } else {
         dispatch(logout());
       }

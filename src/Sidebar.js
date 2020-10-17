@@ -1,95 +1,94 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, setState } from "react";
+import { useDispatch } from "react-redux";
 import "./Sidebar.css";
-import SidebarChannel from "./SidebarChannel";
-import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
-import AddIcon from "@material-ui/icons/Add";
-import SignalCellularAltIcon from "@material-ui/icons/SignalCellularAlt";
-import CallIcon from "@material-ui/icons/Call";
-import { Avatar } from "@material-ui/core";
-import MicIcon from "@material-ui/icons/Mic";
-import HeadsetMicIcon from "@material-ui/icons/HeadsetMic";
+import { Avatar, Fab, ListItemAvatar } from "@material-ui/core";
 import SettingsIcon from "@material-ui/icons/Settings";
-import { selectUser } from "./features/userSlice";
+import { selectUser, logout } from "./features/userSlice";
+import { setRoomId, selectPlayers } from "./features/appSlice";
 import { useSelector } from "react-redux";
 import db, { auth } from "./firebase.js";
+import SwipeableDrawer from "@material-ui/core/SwipeableDrawer";
+import List from "@material-ui/core/List";
+import Divider from "@material-ui/core/Divider";
+import ListItem from "@material-ui/core/ListItem";
+import ListItemIcon from "@material-ui/core/ListItemIcon";
+import ListItemText from "@material-ui/core/ListItemText";
+import MenuIcon from "@material-ui/icons/Menu";
+import ExitToAppIcon from "@material-ui/icons/ExitToApp";
 
 function Sidebar() {
+  const dispatch = useDispatch();
   const user = useSelector(selectUser);
-  const [channels, setChannels] = useState([]);
+  const players = useSelector(selectPlayers);
+  const anchor = "left";
+  const [drawerState, setDrawerState] = useState({ left: false });
 
-  useEffect(() => {
-    db.collection("channels").onSnapshot((snapshot) =>
-      setChannels(
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          channel: doc.data(),
-        }))
-      )
-    );
-  }, []);
-
-  const handleAddChannel = () => {
-    const channelName = prompt("Enter new channel name");
-
-    if (channelName) {
-      db.collection("channels").add({
-        channelName: channelName,
-      });
-    }
+  const toggleDrawer = (anchor, open) => (event) => {
+    setDrawerState({ ...drawerState, [anchor]: open });
   };
+
+  const list = (anchor) => (
+    <div
+      onClick={toggleDrawer(anchor, false)}
+      onKeyDown={toggleDrawer(anchor, false)}>
+      <List>
+        {players?.map((player) => (
+          <ListItem
+            button
+            key={player.id}
+            // onClick={() =>
+            //   dispatch(
+            //     setChannelInfo({
+            //       channelId: players.id
+            //     })
+            //   )
+            // }
+          >
+            <ListItemAvatar>
+              <Avatar src={player.photo} />
+            </ListItemAvatar>
+            <ListItemText primary={player.displayName} />
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <List>
+        <ListItem button className="sidebar__gameOptions">
+          <ListItemIcon>
+            <SettingsIcon />
+          </ListItemIcon>
+          <ListItemText>game options</ListItemText>
+        </ListItem>
+        <ListItem
+          button
+          className="sidebar__signout"
+          onClick={() => dispatch(logout())}>
+          <ListItemIcon>
+            <ExitToAppIcon />
+          </ListItemIcon>
+          <ListItemText>sign out</ListItemText>
+        </ListItem>
+      </List>
+    </div>
+  );
 
   return (
     <div className="sidebar">
-      <div className="sidebar__top">
-        <h3>War Room</h3>
-        <ExpandMoreIcon />
-      </div>
-
-      <div className="sidebar__channels">
-        <div className="sidebar__channelsHeader">
-          <div className="sidebar__header">
-            <ExpandMoreIcon />
-            <h4>Text Channel</h4>
-          </div>
-          <AddIcon onClick={handleAddChannel} className="sidebar__addChannel" />
-        </div>
-
-        <div className="sidebar__channelsList">
-          {channels.map(({ id, channel }) => (
-            <SidebarChannel
-              key={id}
-              id={id}
-              channelName={channel.channelName}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="sidebar__voice">
-        <SignalCellularAltIcon className="sidebar__voiceIcon" />
-        <div className="sidebar__voiceInfo">
-          <h3>Voice Connected</h3>
-          <p>Stream</p>
-        </div>
-
-        <div className="sidebar__voiceIcons">
-          <CallIcon />
-        </div>
-      </div>
-
-      <div className="sidebar__profile">
-        <Avatar onClick={() => auth.signOut()} src={user.photo} />
-        <div className="sidebar__profileInfo">
-          <h3>{user.displayName}</h3>
-          <p>#{user.uid.substring(0, 6)}</p>
-        </div>
-
-        <div className="sidebar__profileIcons">
-          <MicIcon />
-          <HeadsetMicIcon />
-          <SettingsIcon />
-        </div>
-      </div>
+      <Fab
+        className="sidebar__menuIcon"
+        aria-label="sidebar menu"
+        size="medium"
+        onClick={toggleDrawer(anchor, true)}>
+        <MenuIcon />
+      </Fab>
+      <SwipeableDrawer
+        className="sidebar__drawer"
+        anchor={anchor}
+        open={drawerState[anchor]}
+        onClose={toggleDrawer(anchor, false)}
+        onOpen={toggleDrawer(anchor, true)}>
+        {list(anchor)}
+      </SwipeableDrawer>
     </div>
   );
 }
